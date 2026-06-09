@@ -1,0 +1,28 @@
+package com.ihub.monitor.agent
+
+data class RemoteMessage(
+    val type: String,
+    val requestId: String? = null,
+    val deviceId: String? = null,
+    val deviceName: String? = null,
+    val agentVersion: String? = null,
+    val viewerId: String? = null,
+    val viewerName: String? = null,
+    val width: Int? = null,
+    val height: Int? = null,
+    val timestamp: Long? = null,
+    val imageBase64: String? = null,
+    val command: String? = null,
+    val text: String? = null,
+    val x: Int? = null,
+    val y: Int? = null,
+    val startX: Int? = null,
+    val startY: Int? = null,
+    val endX: Int? = null,
+    val endY: Int? = null,
+    val durationMs: Int? = null,
+    val status: String? = null,
+    val canControl: Boolean? = null,
+    val supportRequested: Boolean? = null,
+    val errorMessage: String? = null
+)

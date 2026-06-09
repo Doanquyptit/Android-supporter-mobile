@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">IHUB Supporter</string>
+    <string name="hint_device_id">Device ID</string>
+    <string name="hint_device_name">Device Name</string>
+    <string name="action_open_accessibility">Setting</string>
+    <string name="action_request_support">Yêu cầu hỗ trợ</string>
+    <string name="action_stop_agent">Dừng hỗ trợ</string>
+    <string name="agent_status_idle">Supporter chưa chạy</string>
+    <string name="agent_status_streaming">Supporter đang stream màn hình</string>
+    <string name="agent_status_requesting_permissions">Đang xin quyền ghi âm và chia sẻ màn hình</string>
+    <string name="agent_status_support_requested">Đã gửi yêu cầu hỗ trợ</string>
+    <string name="agent_status_permission_denied">Người dùng đã từ chối quyền capture màn hình</string>
+    <string name="agent_status_stopped">Supporter đã dừng</string>
+</resources>
