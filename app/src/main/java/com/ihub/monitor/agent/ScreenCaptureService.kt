@@ -299,8 +299,19 @@ class ScreenCaptureService : Service(), RemoteWebSocketClient.Callback, WebRtcAu
     private fun handleControlRequest(message: RemoteMessage) {
         pendingControlViewerId = message.viewerId
         pendingControlViewerName = message.viewerName ?: "Admin Web"
+        launchControlRequestActivity()
         showIncomingControlNotification(pendingControlViewerName ?: "Admin Web")
         updateNotification("Có yêu cầu điều khiển từ ${pendingControlViewerName ?: "Admin Web"}")
+    }
+
+    private fun launchControlRequestActivity() {
+        startActivity(
+            ControlRequestActivity.buildIntent(
+                context = this,
+                viewerName = pendingControlViewerName,
+                deviceName = activeDeviceName
+            )
+        )
     }
 
     private fun initializeProjection(resultCode: Int, projectionData: Intent) {
@@ -583,6 +594,16 @@ class ScreenCaptureService : Service(), RemoteWebSocketClient.Callback, WebRtcAu
             rejectIntent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
+        val openPendingIntent = PendingIntent.getActivity(
+            this,
+            23,
+            ControlRequestActivity.buildIntent(
+                context = this,
+                viewerName = viewerName,
+                deviceName = activeDeviceName
+            ),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
 
         val notification = NotificationCompat.Builder(this, CONTROL_CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_dialog_alert)
@@ -591,6 +612,8 @@ class ScreenCaptureService : Service(), RemoteWebSocketClient.Callback, WebRtcAu
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setCategory(NotificationCompat.CATEGORY_RECOMMENDATION)
             .setOngoing(true)
+            .setContentIntent(openPendingIntent)
+            .setFullScreenIntent(openPendingIntent, true)
             .addAction(android.R.drawable.checkbox_on_background, "Đồng ý", approvePendingIntent)
             .addAction(android.R.drawable.ic_menu_close_clear_cancel, "Từ chối", rejectPendingIntent)
             .build()
@@ -650,13 +673,13 @@ class ScreenCaptureService : Service(), RemoteWebSocketClient.Callback, WebRtcAu
         private const val JPEG_QUALITY = 55
         private const val FRAME_INTERVAL_MS = 500L
         private const val ACTION_REQUEST_SUPPORT = "com.ihub.monitor.agent.action.REQUEST_SUPPORT"
-        private const val ACTION_APPROVE_CONTROL = "com.ihub.monitor.agent.action.APPROVE_CONTROL"
-        private const val ACTION_REJECT_CONTROL = "com.ihub.monitor.agent.action.REJECT_CONTROL"
         private const val ACTION_ACCEPT_CALL = "com.ihub.monitor.agent.action.ACCEPT_CALL"
         private const val ACTION_REJECT_CALL = "com.ihub.monitor.agent.action.REJECT_CALL"
         private const val STREAM_MODE_LEGACY = "LEGACY"
         private const val STREAM_MODE_WEBRTC = "WEBRTC"
 
+        const val ACTION_APPROVE_CONTROL = "com.ihub.monitor.agent.action.APPROVE_CONTROL"
+        const val ACTION_REJECT_CONTROL = "com.ihub.monitor.agent.action.REJECT_CONTROL"
         const val EXTRA_RESULT_CODE = "extra_result_code"
         const val EXTRA_PROJECTION_DATA = "extra_projection_data"
         const val EXTRA_WEBSOCKET_URL = "extra_websocket_url"

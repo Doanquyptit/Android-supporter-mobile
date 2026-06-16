@@ -24,6 +24,11 @@
             android:exported="false" />
 
         <activity
+            android:name=".ControlRequestActivity"
+            android:exported="false"
+            android:launchMode="singleTop" />
+
+        <activity
             android:name=".MainActivity"
             android:exported="true">
             <intent-filter>

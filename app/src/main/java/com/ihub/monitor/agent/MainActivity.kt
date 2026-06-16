@@ -93,7 +93,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     companion object {
-        private const val DEFAULT_WEBSOCKET_URL = "ws://10.125.20.102:8080/ws/remote"
+        private const val DEFAULT_WEBSOCKET_URL = "ws://172.20.10.10:8080/ws/remote"
         private const val DEFAULT_DEVICE_ID = "ihub-001"
         private const val DEFAULT_DEVICE_NAME = "IHUB 001"
     }
