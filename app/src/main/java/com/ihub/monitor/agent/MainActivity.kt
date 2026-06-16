@@ -75,6 +75,11 @@ class MainActivity : AppCompatActivity() {
             stopService(Intent(this, ScreenCaptureService::class.java))
             statusView.text = getString(R.string.agent_status_stopped)
         }
+
+        findViewById<Button>(R.id.openDemoFormButton).setOnClickListener {
+            startActivity(Intent(this, DemoFormActivity::class.java))
+        }
+
     }
 
     private fun requestRuntimePermissions() {

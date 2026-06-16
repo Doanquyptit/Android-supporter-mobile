@@ -6,10 +6,56 @@
     <string name="action_open_accessibility">Setting</string>
     <string name="action_request_support">Yêu cầu hỗ trợ</string>
     <string name="action_stop_agent">Dừng hỗ trợ</string>
+    <string name="action_open_demo_form">Mở màn hình demo nghiệp vụ</string>
     <string name="agent_status_idle">Supporter chưa chạy</string>
     <string name="agent_status_streaming">Supporter đang stream màn hình</string>
     <string name="agent_status_requesting_permissions">Đang xin quyền ghi âm và chia sẻ màn hình</string>
     <string name="agent_status_support_requested">Đã gửi yêu cầu hỗ trợ</string>
     <string name="agent_status_permission_denied">Người dùng đã từ chối quyền capture màn hình</string>
     <string name="agent_status_stopped">Supporter đã dừng</string>
+    <string name="control_request_title">Yêu cầu điều khiển từ xa</string>
+    <string name="control_request_message">%1$s đang xin phép thao tác trực tiếp trên %2$s. Chỉ đồng ý khi bạn cần nhân sự hỗ trợ điều khiển thiết bị.</string>
+    <string name="control_request_approve">Đồng ý điều khiển</string>
+    <string name="control_request_reject">Từ chối</string>
+    <string name="control_request_close">Đóng</string>
+    <string name="demo_form_bank_name">VietinBank</string>
+    <string name="demo_form_title">Biểu mẫu hỗ trợ khách hàng</string>
+    <string name="demo_form_subtitle">Màn hình demo để BA và nghiệp vụ mô phỏng thao tác nhập liệu trên thiết bị IHUB.</string>
+    <string name="demo_vietinbank_logo">Logo VietinBank</string>
+    <string name="demo_section_customer">Thông tin khách hàng</string>
+    <string name="demo_section_service">Nhu cầu giao dịch</string>
+    <string name="demo_section_note">Ghi chú và xác nhận</string>
+    <string name="demo_field_full_name">Họ và tên</string>
+    <string name="demo_field_phone">Số điện thoại</string>
+    <string name="demo_field_tax_code">Mã số thuế / CCCD</string>
+    <string name="demo_field_service">Loại dịch vụ</string>
+    <string name="demo_field_branch">Chi nhánh tiếp nhận</string>
+    <string name="demo_field_contact_method">Phương thức liên hệ</string>
+    <string name="demo_hint_full_name">Nguyễn Văn A</string>
+    <string name="demo_hint_phone">0901 234 567</string>
+    <string name="demo_hint_tax_code">0301234567</string>
+    <string name="demo_hint_note">Nhập mô tả nhu cầu, ví dụ: cần hỗ trợ hoàn tất hồ sơ nộp thuế hoặc xác minh chứng từ.</string>
+    <string name="demo_contact_phone">Gọi điện xác nhận</string>
+    <string name="demo_contact_email">Gửi email phản hồi</string>
+    <string name="demo_contact_branch">Hẹn tại quầy giao dịch</string>
+    <string name="demo_switch_priority">Đánh dấu hồ sơ ưu tiên xử lý trong ngày</string>
+    <string name="demo_checkbox_consent">Khách hàng đồng ý chia sẻ thông tin cho mục đích xử lý hồ sơ.</string>
+    <string name="demo_action_reset">Làm mới</string>
+    <string name="demo_action_submit">Gửi yêu cầu</string>
+    <string name="demo_action_back_to_agent">Quay lại màn hình agent</string>
+    <string name="demo_form_submit_message">Đã ghi nhận biểu mẫu demo trên thiết bị.</string>
+
+    <string-array name="demo_service_types">
+        <item>Đăng ký tài khoản doanh nghiệp</item>
+        <item>Nộp thuế điện tử</item>
+        <item>Cập nhật hồ sơ khách hàng</item>
+        <item>Tra soát giao dịch</item>
+    </string-array>
+
+    <string-array name="demo_branch_options">
+        <item>CN Hà Nội</item>
+        <item>CN TP. Hồ Chí Minh</item>
+        <item>CN Đà Nẵng</item>
+        <item>CN Cần Thơ</item>
+    </string-array>
 </resources>

@@ -58,5 +58,13 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
             android:text="@string/action_stop_agent" />
+
+        <Button
+            android:id="@+id/openDemoFormButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:text="@string/action_open_demo_form" />
+
     </LinearLayout>
 </ScrollView>

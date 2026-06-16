@@ -28,7 +28,7 @@ import androidx.core.app.NotificationCompat
 import java.io.ByteArrayOutputStream
 import java.nio.ByteBuffer
 
-class ScreenCaptureService : Service(), RemoteWebSocketClient.Callback, WebRtcAudioCallManager.Listener {
+class ScreenCaptureService : Service(), RemoteWebSocketClient.Callback, WebRtcAudioCallManager.Listener, WebRtcScreenStreamManager.Listener {
 
     private val frameHandler = Handler(Looper.getMainLooper())
 
@@ -37,6 +37,7 @@ class ScreenCaptureService : Service(), RemoteWebSocketClient.Callback, WebRtcAu
     private var virtualDisplay: VirtualDisplay? = null
     private var webSocketClient: RemoteWebSocketClient? = null
     private var webRtcAudioCallManager: WebRtcAudioCallManager? = null
+    private var webRtcScreenStreamManager: WebRtcScreenStreamManager? = null
     private var screenWidth = 0
     private var screenHeight = 0
     private var screenDensity = 0
@@ -45,6 +46,7 @@ class ScreenCaptureService : Service(), RemoteWebSocketClient.Callback, WebRtcAu
     private var activeDeviceId = ""
     private var activeDeviceName = ""
     private var projectionStarted = false
+    private var activeStreamMode = STREAM_MODE_LEGACY
     private var mediaProjectionCallback: MediaProjection.Callback? = null
     private var pendingControlViewerId: String? = null
     private var pendingControlViewerName: String? = null
@@ -118,6 +120,7 @@ class ScreenCaptureService : Service(), RemoteWebSocketClient.Callback, WebRtcAu
 
         activeDeviceId = deviceId
         activeDeviceName = deviceName
+        ensureScreenMetricsInitialized()
 
         if (!baseForegroundStarted) {
             startBaseForeground()
@@ -134,6 +137,9 @@ class ScreenCaptureService : Service(), RemoteWebSocketClient.Callback, WebRtcAu
         if (webRtcAudioCallManager == null) {
             initializeAudioCall(websocketUrl, deviceId)
         }
+        if (webRtcScreenStreamManager == null) {
+            initializeScreenStream(websocketUrl, deviceId)
+        }
         return START_STICKY
     }
 
@@ -141,6 +147,7 @@ class ScreenCaptureService : Service(), RemoteWebSocketClient.Callback, WebRtcAu
         frameHandler.removeCallbacksAndMessages(null)
         webSocketClient?.disconnect()
         webRtcAudioCallManager?.disconnect()
+        webRtcScreenStreamManager?.disconnect()
         virtualDisplay?.release()
         imageReader?.close()
         mediaProjectionCallback?.let { callback ->
@@ -186,7 +193,10 @@ class ScreenCaptureService : Service(), RemoteWebSocketClient.Callback, WebRtcAu
                 updateNotification("Phiên điều khiển từ xa đã kết thúc")
             }
             "SUPPORT_ACCEPTED" -> {
-                if (projectionStarted) {
+                activeStreamMode = message.streamMode?.uppercase() ?: STREAM_MODE_LEGACY
+                if (activeStreamMode == STREAM_MODE_WEBRTC) {
+                    updateNotification("Admin đã nhận hỗ trợ, đang chờ khởi tạo WebRTC screen")
+                } else if (projectionStarted) {
                     updateNotification("Admin đã nhận hỗ trợ, thiết bị đang chia sẻ màn hình")
                 } else {
                     startStreamingIfReady()
@@ -206,11 +216,28 @@ class ScreenCaptureService : Service(), RemoteWebSocketClient.Callback, WebRtcAu
         updateNotification("Phiên audio call đã kết thúc")
     }
 
+    override fun getProjectionPermissionData(): Intent? = storedProjectionData
+
+    override fun onScreenStreamStatusChanged(status: String) {
+        updateNotification(status)
+    }
+
+    override fun onScreenControlMessage(message: RemoteMessage) {
+        if (message.type != "COMMAND") {
+            return
+        }
+        handleCommand(message)
+    }
+
     private fun handleCommand(message: RemoteMessage) {
         when (message.command) {
             "TAP" -> {
                 val success = if (message.x != null && message.y != null) {
-                    val tapPoint = toScreenPoint(message.x, message.y)
+                    val tapPoint = toScreenPoint(message.x, message.y, message.sourceWidth, message.sourceHeight)
+                    Log.i(
+                        "ScreenCaptureService",
+                        "TAP mapped: source=(${message.x},${message.y}) sourceSize=${message.sourceWidth}x${message.sourceHeight} target=(${tapPoint.first},${tapPoint.second}) screen=${screenWidth}x${screenHeight}"
+                    )
                     RemoteAccessibilityService.performTap(tapPoint.first, tapPoint.second)
                 } else {
                     false
@@ -230,8 +257,12 @@ class ScreenCaptureService : Service(), RemoteWebSocketClient.Callback, WebRtcAu
                     message.endY != null &&
                     message.durationMs != null
                 ) {
-                    val startPoint = toScreenPoint(message.startX, message.startY)
-                    val endPoint = toScreenPoint(message.endX, message.endY)
+                    val startPoint = toScreenPoint(message.startX, message.startY, message.sourceWidth, message.sourceHeight)
+                    val endPoint = toScreenPoint(message.endX, message.endY, message.sourceWidth, message.sourceHeight)
+                    Log.i(
+                        "ScreenCaptureService",
+                        "SWIPE mapped: sourceStart=(${message.startX},${message.startY}) sourceEnd=(${message.endX},${message.endY}) sourceSize=${message.sourceWidth}x${message.sourceHeight} targetStart=(${startPoint.first},${startPoint.second}) targetEnd=(${endPoint.first},${endPoint.second}) screen=${screenWidth}x${screenHeight}"
+                    )
                     RemoteAccessibilityService.performSwipe(
                         startPoint.first,
                         startPoint.second,
@@ -268,28 +299,24 @@ class ScreenCaptureService : Service(), RemoteWebSocketClient.Callback, WebRtcAu
     private fun handleControlRequest(message: RemoteMessage) {
         pendingControlViewerId = message.viewerId
         pendingControlViewerName = message.viewerName ?: "Admin Web"
+        launchControlRequestActivity()
         showIncomingControlNotification(pendingControlViewerName ?: "Admin Web")
         updateNotification("Có yêu cầu điều khiển từ ${pendingControlViewerName ?: "Admin Web"}")
     }
 
+    private fun launchControlRequestActivity() {
+        startActivity(
+            ControlRequestActivity.buildIntent(
+                context = this,
+                viewerName = pendingControlViewerName,
+                deviceName = activeDeviceName
+            )
+        )
+    }
+
     private fun initializeProjection(resultCode: Int, projectionData: Intent) {
         val projectionManager = getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
-        val windowManager = getSystemService(Context.WINDOW_SERVICE) as WindowManager
-        val metrics = resources.displayMetrics
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            val bounds: Rect = windowManager.currentWindowMetrics.bounds
-            screenWidth = bounds.width()
-            screenHeight = bounds.height()
-        } else {
-            val legacyMetrics = DisplayMetrics()
-            @Suppress("DEPRECATION")
-            windowManager.defaultDisplay.getRealMetrics(legacyMetrics)
-            screenWidth = legacyMetrics.widthPixels
-            screenHeight = legacyMetrics.heightPixels
-        }
-
-        screenDensity = metrics.densityDpi
+        ensureScreenMetricsInitialized()
 
         mediaProjection = projectionManager.getMediaProjection(resultCode, projectionData)
         val projection = requireNotNull(mediaProjection) { "MediaProjection must not be null after consent" }
@@ -379,9 +406,44 @@ class ScreenCaptureService : Service(), RemoteWebSocketClient.Callback, WebRtcAu
         ).also { it.connect() }
     }
 
+    private fun initializeScreenStream(websocketUrl: String, deviceId: String) {
+        val signalingUrl = websocketUrl.replace("/ws/remote", "/ws/webrtc-screen")
+        webRtcScreenStreamManager?.disconnect()
+        webRtcScreenStreamManager = WebRtcScreenStreamManager(
+            context = applicationContext,
+            signalingUrl = signalingUrl,
+            deviceId = deviceId,
+            listener = this
+        ).also { it.connect() }
+    }
+
     private fun startFrameLoop() {
         frameHandler.removeCallbacks(frameRunnable)
         frameHandler.post(frameRunnable)
+    }
+
+    private fun ensureScreenMetricsInitialized() {
+        if (screenWidth > 0 && screenHeight > 0 && screenDensity > 0) {
+            return
+        }
+
+        val windowManager = getSystemService(Context.WINDOW_SERVICE) as WindowManager
+        val metrics = resources.displayMetrics
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            val bounds: Rect = windowManager.currentWindowMetrics.bounds
+            screenWidth = bounds.width()
+            screenHeight = bounds.height()
+        } else {
+            val legacyMetrics = DisplayMetrics()
+            @Suppress("DEPRECATION")
+            windowManager.defaultDisplay.getRealMetrics(legacyMetrics)
+            screenWidth = legacyMetrics.widthPixels
+            screenHeight = legacyMetrics.heightPixels
+        }
+
+        screenDensity = metrics.densityDpi
+        Log.i("ScreenCaptureService", "Screen metrics initialized: ${screenWidth}x${screenHeight} density=$screenDensity")
     }
 
     private fun sendLatestFrame() {
@@ -442,13 +504,17 @@ class ScreenCaptureService : Service(), RemoteWebSocketClient.Callback, WebRtcAu
         return Base64.encodeToString(outputStream.toByteArray(), Base64.NO_WRAP)
     }
 
-    private fun toScreenPoint(x: Int, y: Int): Pair<Int, Int> {
-        if (streamedFrameWidth <= 0 || streamedFrameHeight <= 0 || screenWidth <= 0 || screenHeight <= 0) {
+    private fun toScreenPoint(x: Int, y: Int, sourceWidth: Int?, sourceHeight: Int?): Pair<Int, Int> {
+        ensureScreenMetricsInitialized()
+        val effectiveSourceWidth = sourceWidth ?: streamedFrameWidth
+        val effectiveSourceHeight = sourceHeight ?: streamedFrameHeight
+
+        if (effectiveSourceWidth <= 0 || effectiveSourceHeight <= 0 || screenWidth <= 0 || screenHeight <= 0) {
             return x to y
         }
 
-        val scaledX = (x.toFloat() * screenWidth.toFloat() / streamedFrameWidth.toFloat()).toInt()
-        val scaledY = (y.toFloat() * screenHeight.toFloat() / streamedFrameHeight.toFloat()).toInt()
+        val scaledX = (x.toFloat() * screenWidth.toFloat() / effectiveSourceWidth.toFloat()).toInt()
+        val scaledY = (y.toFloat() * screenHeight.toFloat() / effectiveSourceHeight.toFloat()).toInt()
 
         return scaledX.coerceIn(0, screenWidth - 1) to scaledY.coerceIn(0, screenHeight - 1)
     }
@@ -528,6 +594,16 @@ class ScreenCaptureService : Service(), RemoteWebSocketClient.Callback, WebRtcAu
             rejectIntent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
+        val openPendingIntent = PendingIntent.getActivity(
+            this,
+            23,
+            ControlRequestActivity.buildIntent(
+                context = this,
+                viewerName = viewerName,
+                deviceName = activeDeviceName
+            ),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
 
         val notification = NotificationCompat.Builder(this, CONTROL_CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_dialog_alert)
@@ -536,6 +612,8 @@ class ScreenCaptureService : Service(), RemoteWebSocketClient.Callback, WebRtcAu
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setCategory(NotificationCompat.CATEGORY_RECOMMENDATION)
             .setOngoing(true)
+            .setContentIntent(openPendingIntent)
+            .setFullScreenIntent(openPendingIntent, true)
             .addAction(android.R.drawable.checkbox_on_background, "Đồng ý", approvePendingIntent)
             .addAction(android.R.drawable.ic_menu_close_clear_cancel, "Từ chối", rejectPendingIntent)
             .build()
@@ -595,11 +673,13 @@ class ScreenCaptureService : Service(), RemoteWebSocketClient.Callback, WebRtcAu
         private const val JPEG_QUALITY = 55
         private const val FRAME_INTERVAL_MS = 500L
         private const val ACTION_REQUEST_SUPPORT = "com.ihub.monitor.agent.action.REQUEST_SUPPORT"
-        private const val ACTION_APPROVE_CONTROL = "com.ihub.monitor.agent.action.APPROVE_CONTROL"
-        private const val ACTION_REJECT_CONTROL = "com.ihub.monitor.agent.action.REJECT_CONTROL"
         private const val ACTION_ACCEPT_CALL = "com.ihub.monitor.agent.action.ACCEPT_CALL"
         private const val ACTION_REJECT_CALL = "com.ihub.monitor.agent.action.REJECT_CALL"
+        private const val STREAM_MODE_LEGACY = "LEGACY"
+        private const val STREAM_MODE_WEBRTC = "WEBRTC"
 
+        const val ACTION_APPROVE_CONTROL = "com.ihub.monitor.agent.action.APPROVE_CONTROL"
+        const val ACTION_REJECT_CONTROL = "com.ihub.monitor.agent.action.REJECT_CONTROL"
         const val EXTRA_RESULT_CODE = "extra_result_code"
         const val EXTRA_PROJECTION_DATA = "extra_projection_data"
         const val EXTRA_WEBSOCKET_URL = "extra_websocket_url"
