@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="vtb_primary">#005BAA</color>
+    <color name="vtb_primary_dark">#004684</color>
+    <color name="vtb_primary_soft">#EAF4FE</color>
+    <color name="vtb_accent_red">#D71920</color>
+    <color name="vtb_text">#15314B</color>
+    <color name="vtb_text_muted">#5D7188</color>
+    <color name="vtb_surface">#FFFFFF</color>
+    <color name="vtb_border">#D7E5F2</color>
+    <color name="vtb_background">#F4F8FD</color>
+</resources>

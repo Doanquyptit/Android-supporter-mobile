@@ -20,9 +20,12 @@ data class RemoteMessage(
     val startY: Int? = null,
     val endX: Int? = null,
     val endY: Int? = null,
+    val sourceWidth: Int? = null,
+    val sourceHeight: Int? = null,
     val durationMs: Int? = null,
     val status: String? = null,
     val canControl: Boolean? = null,
     val supportRequested: Boolean? = null,
+    val streamMode: String? = null,
     val errorMessage: String? = null
 )

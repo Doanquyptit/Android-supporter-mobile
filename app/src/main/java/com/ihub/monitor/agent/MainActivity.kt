@@ -75,6 +75,11 @@ class MainActivity : AppCompatActivity() {
             stopService(Intent(this, ScreenCaptureService::class.java))
             statusView.text = getString(R.string.agent_status_stopped)
         }
+
+        findViewById<Button>(R.id.openDemoFormButton).setOnClickListener {
+            startActivity(Intent(this, DemoFormActivity::class.java))
+        }
+
     }
 
     private fun requestRuntimePermissions() {
@@ -88,7 +93,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     companion object {
-        private const val DEFAULT_WEBSOCKET_URL = "ws://172.20.10.10:8080/ws/remote"
+        private const val DEFAULT_WEBSOCKET_URL = "ws://10.125.20.102:8080/ws/remote"
         private const val DEFAULT_DEVICE_ID = "ihub-001"
         private const val DEFAULT_DEVICE_NAME = "IHUB 001"
     }
